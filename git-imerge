@@ -738,6 +738,10 @@ class NotABlockingCommitError(Exception):
     pass
 
 
+class NotBlockingEmptyCommitError(Exception):
+    pass
+
+
 class MergeFrontier(object):
     """Represents the merge frontier within a Block.
 
@@ -1296,7 +1300,7 @@ class MergeFrontier(object):
                 else:
                     # An index pair can only be in a single blocker
                     # block, which we've already found:
-                    raise NotABlockingCommitError(
+                    raise NotBlockingEmptyCommitError(
                         'Commit %d-%d was not blocking the frontier.'
                         % self.block.get_original_indexes(i1, i2)
                         )
@@ -2604,6 +2608,8 @@ def incorporate_user_merge(merge_state, edit_log_msg=None):
             )
     except NotABlockingCommitError:
         raise
+    except NotBlockingEmptyCommitError:
+        check_call(["git", "commit", "--allow-empty", "-m", "unique commit message"])
     finally:
         merge_state.save()
 
@@ -3207,6 +3213,9 @@ def main(args):
         except NoManualMergeError:
             pass
         except NotABlockingCommitError as e:
+            raise Failure(str(e))
+        except NotBlockingEmptyCommitError as e:
+            # Print some message about allowing empty commits
             raise Failure(str(e))
         except ManualMergeUnusableError as e:
             raise Failure(str(e))
